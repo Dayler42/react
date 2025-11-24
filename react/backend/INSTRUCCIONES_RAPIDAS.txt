@@ -1,0 +1,60 @@
+================================================================================
+INSTRUCCIONES RAPIDAS: Migraciones y Superusuario
+================================================================================
+
+PROBLEMA: Error de conexion a PostgreSQL
+
+OPCION 1: USAR SQLITE (Mas rapido para desarrollo)
+--------------------------------------------------
+1. Abre: backend/core/settings.py
+2. Busca la seccion DATABASES (linea ~74)
+3. Reemplaza con:
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
+
+4. Ejecuta:
+   cd backend
+   python manage.py makemigrations
+   python manage.py migrate
+   python create_superuser.py
+
+OPCION 2: CONFIGURAR POSTGRESQL
+--------------------------------
+1. Verifica que PostgreSQL este corriendo
+2. Crea la base de datos: CREATE DATABASE kanban_db;
+3. Edita backend/.env y ajusta DB_PASSWORD con tu contraseña real
+4. Ejecuta las migraciones
+
+COMO EDITAR .env:
+-----------------
+- Abre backend/.env con Notepad o VS Code
+- Cambia DB_PASSWORD=postgres por tu contraseña real
+- Guarda el archivo (en UTF-8)
+- Vuelve a ejecutar: python manage.py migrate
+
+CREAR SUPERUSUARIO:
+-------------------
+Despues de las migraciones:
+
+python create_superuser.py
+
+O manualmente:
+python manage.py createsuperuser
+
+CREDENCIALES DEL SUPERUSUARIO (script):
+- Username: admin
+- Password: admin123
+- Role: teacher
+
+================================================================================
+
+
+
+
+
+
