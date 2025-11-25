@@ -1,0 +1,2023 @@
+================================================================================
+DOCUMENTACIÓN DE COMPONENTES PRIORITARIOS - GESTOR DE TAREAS
+================================================================================
+
+Este documento explica en detalle los 5 componentes más importantes del sistema
+de gestión de tareas, incluyendo todas sus funciones, estados y líneas de código.
+
+================================================================================
+COMPONENTE 1: App.jsx
+================================================================================
+
+ARCHIVO: react/gestor-tareas/src/App.jsx
+LÍNEAS TOTALES: 148
+
+DESCRIPCIÓN GENERAL:
+-------------------
+App.jsx es el componente raíz de la aplicación. Maneja la autenticación, el 
+estado del usuario, la navegación entre vistas y proporciona el contexto de 
+tema para toda la aplicación.
+
+================================================================================
+IMPORTS Y DEPENDENCIAS
+================================================================================
+
+Líneas 1-9: Importaciones necesarias
+-------------------------------------
+- useState, useEffect: Hooks de React para manejo de estado y efectos
+- Tablero: Componente principal del sistema de tareas
+- Login: Componente de autenticación
+- ErrorBoundary: Componente para capturar errores de React
+- ThemeToggle: Componente para cambiar entre tema claro/oscuro
+- SwaggerUI: Componente para visualizar la documentación de la API
+- Notificaciones: Componente para mostrar notificaciones
+- ThemeProvider, useTheme: Contexto y hook para gestión de temas
+- App.css: Estilos globales de la aplicación
+
+================================================================================
+COMPONENTE: AppContent
+================================================================================
+
+Línea 11: Declaración del componente
+------------------------------------
+function AppContent()
+
+Componente funcional que contiene la lógica principal de la aplicación. No 
+recibe props directamente, pero usa el hook useTheme para acceder al contexto.
+
+ESTADOS DEL COMPONENTE (useState)
+----------------------------------
+
+Línea 13: useTheme()
+--------------------
+const { isDark } = useTheme();
+Obtiene el tema actual (isDark: true/false) del ThemeContext para aplicar 
+estilos según el modo claro/oscuro.
+
+Línea 13: usuario
+------------------
+const [usuario, setUsuario] = useState(null);
+Estado que almacena la información del usuario autenticado. Inicialmente 
+null, se actualiza cuando el usuario inicia sesión.
+
+Estructura del objeto usuario:
+- nombre: Nombre del usuario
+- rol: 'docente' o 'estudiante'
+- id: ID del usuario
+- Otros campos según el backend
+
+Línea 14: vistaActual
+----------------------
+const [vistaActual, setVistaActual] = useState('tablero');
+Estado que controla qué vista se muestra:
+- 'tablero': Vista principal del sistema de tareas
+- 'swagger': Vista de documentación de la API
+
+================================================================================
+EFECTOS (useEffect)
+================================================================================
+
+Líneas 17-32: Cargar usuario guardado
+---------------------------------------
+useEffect(() => {
+  const savedUser = localStorage.getItem('user');
+  const accessToken = localStorage.getItem('access_token');
+  
+  if (savedUser && accessToken) {
+    try {
+      const userData = JSON.parse(savedUser);
+      setUsuario(userData);
+    } catch (error) {
+      console.error('Error al cargar usuario:', error);
+      localStorage.removeItem('user');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+    }
+  }
+}, []);
+
+PROPÓSITO:
+- Se ejecuta una sola vez al montar el componente (array de dependencias vacío)
+- Intenta cargar el usuario y token guardados en localStorage
+- Si encuentra datos válidos, restaura la sesión del usuario
+- Si hay error al parsear, limpia los datos corruptos del localStorage
+
+PROCESO:
+1. Obtiene 'user' y 'access_token' del localStorage
+2. Si ambos existen, intenta parsear el JSON del usuario
+3. Si el parseo es exitoso, establece el usuario en el estado
+4. Si hay error, limpia todos los tokens y datos del usuario
+
+================================================================================
+FUNCIONES DEL COMPONENTE
+================================================================================
+
+FUNCIÓN: handleLogin (Líneas 34-36)
+------------------------------------
+const handleLogin = (datosUsuario) => {
+  setUsuario(datosUsuario);
+};
+
+PROPÓSITO:
+Callback que se ejecuta cuando el usuario inicia sesión exitosamente.
+
+PARÁMETROS:
+- datosUsuario: Objeto con la información del usuario autenticado
+
+ACCIÓN:
+- Actualiza el estado 'usuario' con los datos recibidos
+- Esto hace que el componente renderice la vista principal en lugar del login
+
+FUNCIÓN: handleLogout (Líneas 38-44)
+-------------------------------------
+const handleLogout = () => {
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+  localStorage.removeItem('user');
+  setUsuario(null);
+};
+
+PROPÓSITO:
+Cierra la sesión del usuario y limpia todos los datos de autenticación.
+
+PROCESO:
+1. Elimina el token de acceso del localStorage
+2. Elimina el token de refresco del localStorage
+3. Elimina los datos del usuario del localStorage
+4. Establece el estado 'usuario' en null
+5. Esto hace que el componente renderice el login nuevamente
+
+================================================================================
+RENDERIZADO CONDICIONAL
+================================================================================
+
+Líneas 46-54: Si no hay usuario (mostrar login)
+------------------------------------------------
+if (!usuario) {
+  return (
+    <ErrorBoundary>
+      <div className="login-page">
+        <Login onLogin={handleLogin} />
+      </div>
+    </ErrorBoundary>
+  );
+}
+
+PROPÓSITO:
+Si no hay usuario autenticado, muestra el componente de login.
+
+COMPONENTES:
+- ErrorBoundary: Captura errores de React para evitar que la app se rompa
+- Login: Componente de autenticación que recibe handleLogin como callback
+
+Líneas 56-136: Si hay usuario (mostrar aplicación principal)
+-------------------------------------------------------------
+return (
+  <ErrorBoundary>
+    <div style={{...}}>
+      {/* Header con información del usuario */}
+      <div style={{...}}>
+        <div>
+          <h1>Bienvenido, {usuario.nombre}!</h1>
+          <p>{usuario.rol === 'docente' ? '👨‍🏫 Docente' : '👨‍🎓 Estudiante'}</p>
+        </div>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          {/* Componentes del header */}
+        </div>
+      </div>
+      {/* Vista actual (Tablero o SwaggerUI) */}
+    </div>
+  </ErrorBoundary>
+);
+
+ESTRUCTURA DEL HEADER (Líneas 67-128)
+--------------------------------------
+
+a) Contenedor principal (Líneas 67-80):
+   - Fondo adaptativo según tema
+   - Padding, sombra, posición sticky (se mantiene arriba al hacer scroll)
+   - zIndex: 100 para estar sobre otros elementos
+   - Borde inferior según tema
+
+b) Información del usuario (Líneas 82-89):
+   - Título: "Bienvenido, [nombre]!"
+   - Subtítulo: Muestra el rol con emoji (Docente o Estudiante)
+   - Estilos adaptativos según tema
+
+c) Botones del header (Líneas 90-127):
+   
+   - Notificaciones (Línea 91):
+     <Notificaciones usuario={usuario} />
+     Componente que muestra notificaciones del usuario
+   
+   - Botón API Docs (Líneas 92-109):
+     onClick: Alterna entre 'tablero' y 'swagger'
+     Estilos dinámicos según vistaActual
+     Texto cambia según la vista actual
+   
+   - ThemeToggle (Línea 110):
+     <ThemeToggle />
+     Botón para cambiar entre tema claro y oscuro
+   
+   - Botón Cerrar Sesión (Líneas 111-126):
+     onClick: Ejecuta handleLogout
+     Estilo rojo (#f44336)
+     Efectos hover para mejor UX
+
+VISTA ACTUAL (Líneas 129-133)
+------------------------------
+{vistaActual === 'tablero' ? (
+  <Tablero usuario={usuario} />
+) : (
+  <SwaggerUI />
+)}
+
+PROPÓSITO:
+Renderiza el componente correspondiente según vistaActual:
+- Si es 'tablero': Muestra el Tablero principal
+- Si es 'swagger': Muestra la documentación de la API
+
+================================================================================
+COMPONENTE: App
+================================================================================
+
+Líneas 139-145: Componente wrapper
+-----------------------------------
+function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
+  );
+}
+
+PROPÓSITO:
+Componente raíz que envuelve AppContent con el ThemeProvider.
+
+FUNCIÓN:
+- ThemeProvider proporciona el contexto de tema a todos los componentes hijos
+- AppContent es el componente que contiene la lógica principal
+- Este patrón permite que todos los componentes accedan al tema mediante useTheme()
+
+Línea 147: Exportación
+-----------------------
+export default App;
+Exporta el componente App como exportación por defecto.
+
+================================================================================
+COMPONENTE 2: Tablero.jsx
+================================================================================
+
+ARCHIVO: react/gestor-tareas/src/Tablero.jsx
+LÍNEAS TOTALES: 1348
+
+DESCRIPCIÓN GENERAL:
+-------------------
+Tablero.jsx es el componente central del sistema. Coordina la gestión de tareas,
+cursos, estudiantes, drag and drop, y todas las operaciones principales del 
+sistema. Es el componente más complejo y crítico de la aplicación.
+
+================================================================================
+IMPORTS Y DEPENDENCIAS
+================================================================================
+
+Líneas 1-10: Importaciones necesarias
+--------------------------------------
+- useState, useEffect, useCallback, useRef: Hooks de React
+- DndContext, DragOverlay, closestCenter: Componentes de @dnd-kit para drag and drop
+- Columna: Componente que representa cada columna del tablero
+- NuevaTarea: Componente para crear nuevas tareas
+- GestionCursos: Componente para gestionar cursos
+- FiltrosEstudiante: Componente de filtros para estudiantes
+- HistorialActividad: Componente para mostrar historial
+- Calificaciones: Componente para mostrar calificaciones
+- useTheme: Hook para obtener el tema
+- cardsAPI, listsAPI, boardsAPI, labelsAPI: Funciones de la API
+
+================================================================================
+DECLARACIÓN DEL COMPONENTE
+================================================================================
+
+Línea 12: Declaración
+---------------------
+function Tablero({ usuario })
+
+PARÁMETROS:
+- usuario: Objeto con información del usuario actual (nombre, rol, id, etc.)
+
+================================================================================
+ESTADOS DEL COMPONENTE (useState)
+================================================================================
+
+Línea 14-18: tareas
+-------------------
+const [tareas, setTareas] = useState({
+  pendiente: [],
+  progreso: [],
+  completada: []
+});
+
+Estado que almacena todas las tareas organizadas por estado:
+- pendiente: Array de tareas pendientes
+- progreso: Array de tareas en progreso
+- completada: Array de tareas completadas
+
+Línea 20: cursos
+----------------
+const [cursos, setCursos] = useState([]);
+Array de todos los cursos (boards) disponibles para el usuario.
+
+Línea 21: cursoActual
+---------------------
+const [cursoActual, setCursoActual] = useState(null);
+Objeto del curso actualmente seleccionado. Contiene:
+- id: ID del curso
+- nombre: Nombre del curso
+- docente: Nombre del docente
+
+Línea 22: estudiantes
+---------------------
+const [estudiantes, setEstudiantes] = useState([]);
+Array de estudiantes asignados al curso actual.
+
+Línea 23: historial
+-------------------
+const [historial, setHistorial] = useState([]);
+Array de actividades registradas para mostrar en el historial.
+
+Línea 24: mostrarHistorial
+---------------------------
+const [mostrarHistorial, setMostrarHistorial] = useState(false);
+Booleano que controla si se muestra el componente HistorialActividad.
+
+Línea 25: mostrarCalificaciones
+--------------------------------
+const [mostrarCalificaciones, setMostrarCalificaciones] = useState(false);
+Booleano que controla si se muestra el componente Calificaciones.
+
+Línea 26: filtro
+----------------
+const [filtro, setFiltro] = useState('todas');
+Filtro actual para estudiantes:
+- 'todas': Muestra todas las tareas
+- 'mis-asignaciones': Solo tareas asignadas al estudiante
+- 'proximas-vencer': Solo tareas próximas a vencer (7 días)
+
+Línea 27: etiquetas
+-------------------
+const [etiquetas, setEtiquetas] = useState([]);
+Array de etiquetas disponibles para el curso actual.
+
+Línea 29: todasLasTareas
+------------------------
+const [todasLasTareas, setTodasLasTareas] = useState({});
+Objeto que almacena todas las tareas de todos los cursos (para futuras 
+funcionalidades).
+
+Línea 30: boardId
+-----------------
+const [boardId, setBoardId] = useState(null);
+ID del board (curso) actual. Se usa para operaciones con el backend.
+
+Línea 31: listsMap
+------------------
+const [listsMap, setListsMap] = useState({});
+Mapa que relaciona estados con IDs de listas del backend:
+{
+  pendiente: id_lista_pendiente,
+  progreso: id_lista_progreso,
+  completada: id_lista_completada
+}
+
+Línea 32: activeId
+------------------
+const [activeId, setActiveId] = useState(null);
+ID de la tarea que se está arrastrando actualmente (para drag and drop).
+
+================================================================================
+EFECTOS (useEffect)
+================================================================================
+
+EFECTO 1: Cargar boards (Líneas 35-84)
+---------------------------------------
+useEffect(() => {
+  const cargarBoards = async () => {
+    // ... código ...
+  };
+  cargarBoards();
+}, [usuario.rol]);
+
+PROPÓSITO:
+Carga todos los cursos (boards) disponibles cuando cambia el rol del usuario.
+
+PROCESO:
+1. Llama a boardsAPI.getAll() para obtener todos los boards
+2. Valida que la respuesta sea un array
+3. Formatea los boards al formato esperado (id, nombre, docente)
+4. Establece los cursos en el estado
+5. Si hay boards y no hay curso actual:
+   a) Intenta cargar curso guardado en localStorage
+   b) Si existe y es válido, lo selecciona
+   c) Si no, selecciona el primero de la lista
+
+FUNCIÓN: cargarTareasDesdeBackend (Líneas 87-140)
+---------------------------------------------------
+const cargarTareasDesdeBackend = useCallback(async () => {
+  if (!cursoActual) return;
+  
+  try {
+    const cards = await cardsAPI.getAll({ board: cursoActual.id });
+    
+    const tareasMapeadas = {
+      pendiente: [],
+      progreso: [],
+      completada: []
+    };
+    
+    cards.forEach(card => {
+      const tarea = {
+        id: card.id,
+        texto: card.title,
+        descripcion: card.description || '',
+        asignadoA: card.assigned_to ? (...) : null,
+        asignadoAId: card.assigned_to ? card.assigned_to.id : null,
+        fechaVencimiento: card.due_date || null,
+        cursoId: card.list?.board?.id || cursoActual.id,
+        labels: card.labels || [],
+        grade: card.grade || null
+      };
+      
+      // Organizar según el título de la lista
+      const listTitle = card.list?.title?.toLowerCase() || '';
+      if (listTitle.includes('pendiente')) {
+        tareasMapeadas.pendiente.push(tarea);
+      } else if (listTitle.includes('progreso')) {
+        tareasMapeadas.progreso.push(tarea);
+      } else if (listTitle.includes('completada')) {
+        tareasMapeadas.completada.push(tarea);
+      } else {
+        tareasMapeadas.pendiente.push(tarea);
+      }
+    });
+    
+    setTareas(tareasMapeadas);
+  } catch (error) {
+    console.error('Error al cargar tareas:', error);
+    setTareas({ pendiente: [], progreso: [], completada: [] });
+  }
+}, [cursoActual?.id]);
+
+PROPÓSITO:
+Carga todas las tareas del curso actual desde el backend y las organiza por 
+estado según la lista a la que pertenecen.
+
+PROCESO:
+1. Verifica que haya un curso actual
+2. Obtiene todas las cards del board usando cardsAPI.getAll()
+3. Mapea cada card a un objeto tarea con todos sus campos
+4. Organiza las tareas según el título de la lista:
+   - Si contiene "pendiente" → pendiente
+   - Si contiene "progreso" → progreso
+   - Si contiene "completada" → completada
+   - Por defecto → pendiente
+5. Actualiza el estado de tareas
+6. Si hay error, establece arrays vacíos
+
+EFECTO 2: Cargar tareas cuando cambia el curso (Líneas 212-216)
+----------------------------------------------------------------
+useEffect(() => {
+  if (cursoActual) {
+    cargarTareasDesdeBackend();
+  }
+}, [cursoActual?.id, usuario.rol, cargarTareasDesdeBackend]);
+
+PROPÓSITO:
+Recarga las tareas cuando cambia el curso actual o el rol del usuario.
+
+EFECTO 3: Recarga automática para docentes (Líneas 219-241)
+------------------------------------------------------------
+useEffect(() => {
+  if (!cursoActual || usuario.rol !== 'docente') return;
+  
+  const intervalo = setInterval(() => {
+    if (cargarTareasRef.current) {
+      cargarTareasRef.current();
+    }
+  }, 10000); // 10 segundos
+  
+  return () => clearInterval(intervalo);
+}, [cursoActual?.id, usuario.rol]);
+
+PROPÓSITO:
+Recarga automáticamente las tareas cada 10 segundos para docentes, permitiendo
+ver cambios realizados por estudiantes en tiempo real.
+
+EFECTO 4: Recargar al recuperar foco (Líneas 244-256)
+-----------------------------------------------------
+useEffect(() => {
+  if (usuario.rol !== 'docente') return;
+  
+  const handleFocus = () => {
+    if (cursoActual && cargarTareasRef.current) {
+      cargarTareasRef.current();
+    }
+  };
+  
+  window.addEventListener('focus', handleFocus);
+  return () => window.removeEventListener('focus', handleFocus);
+}, [cursoActual?.id, usuario.rol]);
+
+PROPÓSITO:
+Recarga las tareas cuando la ventana recupera el foco (usuario vuelve a la 
+pestaña), para docentes.
+
+EFECTO 5: Cargar estudiantes del curso (Líneas 259-263)
+-------------------------------------------------------
+useEffect(() => {
+  if (cursoActual) {
+    cargarEstudiantesDelCurso();
+  }
+}, [cursoActual?.id, cargarEstudiantesDelCurso]);
+
+PROPÓSITO:
+Carga los estudiantes cuando cambia el curso actual.
+
+FUNCIÓN: cargarEstudiantesDelCurso (Líneas 151-209)
+----------------------------------------------------
+const cargarEstudiantesDelCurso = useCallback(async () => {
+  try {
+    if (!cursoActual?.id) {
+      setEstudiantes([]);
+      return;
+    }
+    
+    const board = await boardsAPI.getById(cursoActual.id);
+    
+    if (board.students && Array.isArray(board.students)) {
+      const estudiantesMapeados = board.students.map(student => {
+        return {
+          id: student.id,
+          nombre: student.username || `${student.first_name} ${student.last_name}` || 'Estudiante',
+          userId: student.id,
+          cursoId: cursoActual.id,
+          email: student.email || '',
+          first_name: student.first_name || '',
+          last_name: student.last_name || ''
+        };
+      }).filter(est => est !== null);
+      
+      setEstudiantes(estudiantesMapeados);
+    } else {
+      setEstudiantes([]);
+    }
+  } catch (error) {
+    console.error('Error al cargar estudiantes:', error);
+    setEstudiantes([]);
+  }
+}, [cursoActual?.id]);
+
+PROPÓSITO:
+Carga los estudiantes asignados al curso actual desde el backend.
+
+PROCESO:
+1. Verifica que haya un curso actual
+2. Obtiene el board completo con sus estudiantes
+3. Mapea cada estudiante al formato esperado
+4. Filtra estudiantes inválidos
+5. Actualiza el estado de estudiantes
+
+EFECTO 6: Cargar etiquetas (Líneas 266-319)
+--------------------------------------------
+useEffect(() => {
+  const cargarEtiquetas = async () => {
+    if (!cursoActual?.id) {
+      setEtiquetas([]);
+      return;
+    }
+    
+    const labels = await labelsAPI.getAll(cursoActual.id);
+    const etiquetasExistentes = Array.isArray(labels) ? labels : [];
+    
+    // Etiquetas predefinidas
+    const ETIQUETAS_PREDEFINIDAS = [
+      { name: 'Examen', color: '#d32f2f' },
+      { name: 'Entrega Obligatoria', color: '#f44336' },
+      { name: 'Importante', color: '#ff9800' },
+      { name: 'Proyecto', color: '#9c27b0' },
+      { name: 'Práctica', color: '#2196f3' },
+      { name: 'Lectura', color: '#4caf50' }
+    ];
+    
+    // Verificar y crear etiquetas predefinidas que no existan
+    const nombresExistentes = etiquetasExistentes.map(e => e.name.toLowerCase());
+    const etiquetasACrear = ETIQUETAS_PREDEFINIDAS.filter(
+      predef => !nombresExistentes.includes(predef.name.toLowerCase())
+    );
+    
+    if (etiquetasACrear.length > 0) {
+      const nuevasEtiquetas = await Promise.all(
+        etiquetasACrear.map(predef =>
+          labelsAPI.create({
+            board: cursoActual.id,
+            name: predef.name,
+            color: predef.color
+          })
+        )
+      );
+      setEtiquetas([...etiquetasExistentes, ...nuevasEtiquetas]);
+    } else {
+      setEtiquetas(etiquetasExistentes);
+    }
+  };
+  
+  cargarEtiquetas();
+}, [cursoActual?.id]);
+
+PROPÓSITO:
+Carga las etiquetas del curso y crea automáticamente las etiquetas predefinidas
+si no existen.
+
+PROCESO:
+1. Obtiene todas las etiquetas del curso
+2. Define las etiquetas predefinidas
+3. Compara con las existentes
+4. Crea las que faltan
+5. Actualiza el estado con todas las etiquetas
+
+EFECTO 7: Auto-seleccionar curso para estudiantes (Líneas 322-326)
+-------------------------------------------------------------------
+useEffect(() => {
+  if (usuario.rol === 'estudiante' && !cursoActual && cursos.length > 0) {
+    setCursoActual(cursos[0]);
+  }
+}, [cursos, cursoActual, usuario.rol]);
+
+PROPÓSITO:
+Si es estudiante y no hay curso seleccionado pero hay cursos disponibles,
+selecciona automáticamente el primero.
+
+EFECTO 8: Cargar listas del curso (Líneas 329-377)
+---------------------------------------------------
+useEffect(() => {
+  if (cursoActual) {
+    setBoardId(cursoActual.id);
+    
+    const cargarListas = async () => {
+      const lists = await listsAPI.getAll(cursoActual.id);
+      
+      const newListsMap = {};
+      lists.forEach(list => {
+        const titleLower = list.title.toLowerCase();
+        
+        if (titleLower.includes('pendiente')) {
+          newListsMap.pendiente = list.id;
+        } else if (titleLower.includes('progreso')) {
+          newListsMap.progreso = list.id;
+        } else if (titleLower.includes('completada')) {
+          newListsMap.completada = list.id;
+        }
+      });
+      
+      setListsMap(newListsMap);
+    };
+    
+    cargarListas();
+  } else {
+    setListsMap({});
+  }
+}, [cursoActual]);
+
+PROPÓSITO:
+Carga las listas del curso y crea el mapa de estados a IDs de listas.
+
+PROCESO:
+1. Establece el boardId
+2. Obtiene todas las listas del board
+3. Mapea cada lista según su título:
+   - "pendiente" → pendiente
+   - "progreso" → progreso
+   - "completada" → completada
+4. Actualiza listsMap
+
+EFECTO 9: Guardar curso en localStorage (Líneas 380-384)
+-------------------------------------------------------
+useEffect(() => {
+  if (cursoActual) {
+    localStorage.setItem('cursoActual', JSON.stringify(cursoActual));
+  }
+}, [cursoActual]);
+
+PROPÓSITO:
+Guarda el curso actual en localStorage para restaurarlo al recargar la página.
+
+================================================================================
+FUNCIONES PRINCIPALES
+================================================================================
+
+FUNCIÓN: agregarActividad (Líneas 386-396)
+-------------------------------------------
+const agregarActividad = (tipo, descripcion, detalles = {}) => {
+  const nuevaActividad = {
+    id: Date.now(),
+    fecha: new Date().toISOString(),
+    tipo,
+    descripcion,
+    usuario: usuario.nombre,
+    ...detalles
+  };
+  setHistorial(prev => [nuevaActividad, ...prev].slice(0, 100));
+};
+
+PROPÓSITO:
+Registra una nueva actividad en el historial.
+
+PARÁMETROS:
+- tipo: Tipo de actividad (ej: 'tarea_creada', 'tarea_movida')
+- descripcion: Descripción de la actividad
+- detalles: Objeto con información adicional
+
+ACCIÓN:
+- Crea un objeto de actividad con timestamp
+- Lo agrega al inicio del historial
+- Mantiene solo las últimas 100 actividades
+
+FUNCIÓN: editarCurso (Líneas 398-478)
+-------------------------------------
+const editarCurso = async (cursoId, nuevoNombre) => {
+  try {
+    if (!nuevoNombre || !nuevoNombre.trim()) {
+      alert('Por favor, ingresa un nombre válido para el curso.');
+      return;
+    }
+    
+    // Actualizar board en el backend
+    await boardsAPI.update(cursoId, { name: nuevoNombre.trim() });
+    
+    // Recargar todos los boards
+    const boards = await boardsAPI.getAll();
+    const boardsFormateados = boards.map(b => ({
+      id: b.id,
+      nombre: b.name,
+      docente: b.teacher?.username || usuario.nombre
+    }));
+    setCursos(boardsFormateados);
+    
+    // Actualizar curso actual si es el editado
+    if (cursoActual?.id === cursoId) {
+      const cursoActualizado = boardsFormateados.find(c => c.id === cursoId);
+      if (cursoActualizado) {
+        setCursoActual(cursoActualizado);
+      }
+    }
+    
+    agregarActividad('curso_editado', `Curso editado a "${nuevoNombre.trim()}"`, { cursoId });
+  } catch (error) {
+    // Manejo de errores detallado
+    // ... código de manejo de errores ...
+  }
+};
+
+PROPÓSITO:
+Edita el nombre de un curso en el backend y actualiza el estado local.
+
+PROCESO:
+1. Valida que el nombre no esté vacío
+2. Actualiza el board en el backend
+3. Recarga todos los boards
+4. Actualiza el estado de cursos
+5. Si el curso editado es el actual, lo actualiza también
+6. Registra la actividad
+
+FUNCIÓN: eliminarCurso (Líneas 480-544)
+----------------------------------------
+const eliminarCurso = async (cursoId) => {
+  try {
+    // Eliminar board en el backend
+    await boardsAPI.delete(cursoId);
+    
+    // Recargar todos los boards
+    const boards = await boardsAPI.getAll();
+    const boardsFormateados = boards.map(b => ({
+      id: b.id,
+      nombre: b.name,
+      docente: b.teacher?.username || usuario.nombre
+    }));
+    setCursos(boardsFormateados);
+    
+    // Si el curso eliminado era el actual, seleccionar otro o limpiar
+    if (cursoActual?.id === cursoId) {
+      if (boardsFormateados.length > 0) {
+        setCursoActual(boardsFormateados[0]);
+      } else {
+        setCursoActual(null);
+      }
+    }
+    
+    agregarActividad('curso_eliminado', `Curso eliminado`, { cursoId });
+  } catch (error) {
+    // Manejo de errores detallado
+  }
+};
+
+PROPÓSITO:
+Elimina un curso del backend y actualiza el estado local.
+
+PROCESO:
+1. Elimina el board en el backend
+2. Recarga todos los boards
+3. Actualiza el estado de cursos
+4. Si el curso eliminado era el actual:
+   - Si hay más cursos, selecciona el primero
+   - Si no hay cursos, establece cursoActual en null
+5. Registra la actividad
+
+FUNCIÓN: crearCurso (Líneas 546-633)
+-------------------------------------
+const crearCurso = async (nombreCurso) => {
+  try {
+    if (!nombreCurso || !nombreCurso.trim()) {
+      alert('Por favor, ingresa un nombre válido para el curso.');
+      return;
+    }
+    
+    // Crear board en el backend
+    const board = await boardsAPI.create({ 
+      name: nombreCurso.trim(), 
+      description: '' 
+    });
+    
+    // Recargar todos los boards
+    const boards = await boardsAPI.getAll();
+    const boardsFormateados = boards.map(b => ({
+      id: b.id,
+      nombre: b.name,
+      docente: b.teacher?.username || usuario.nombre
+    }));
+    setCursos(boardsFormateados);
+    
+    // Seleccionar el nuevo curso
+    const nuevoCurso = {
+      id: board.id,
+      nombre: nombreCurso.trim(),
+      docente: usuario.nombre
+    };
+    setCursoActual(nuevoCurso);
+    setBoardId(board.id);
+    
+    agregarActividad('curso_creado', `Curso "${nombreCurso}" creado`, { cursoId: board.id });
+  } catch (error) {
+    // Manejo de errores detallado
+  }
+};
+
+PROPÓSITO:
+Crea un nuevo curso en el backend y lo selecciona automáticamente.
+
+PROCESO:
+1. Valida que el nombre no esté vacío
+2. Crea el board en el backend
+3. Recarga todos los boards
+4. Actualiza el estado de cursos
+5. Crea el objeto del nuevo curso y lo selecciona
+6. Establece el boardId
+7. Registra la actividad
+
+FUNCIÓN: agregarEstudiante (Líneas 635-715)
+--------------------------------------------
+const agregarEstudiante = async (estudianteData) => {
+  if (!cursoActual?.id) {
+    alert('Error: No hay curso seleccionado');
+    return;
+  }
+  
+  try {
+    // Extraer el userId del estudiante
+    let userId = estudianteData.userId || estudianteData.id;
+    let nombreEstudiante = estudianteData.nombre || estudianteData.username || 'Estudiante';
+    
+    if (!userId) {
+      alert('Error: No se pudo obtener el ID del estudiante');
+      return;
+    }
+    
+    // Agregar estudiante al board en el backend
+    await boardsAPI.addStudent(cursoActual.id, userId);
+    
+    // Esperar un momento y recargar estudiantes
+    await new Promise(resolve => setTimeout(resolve, 200));
+    await cargarEstudiantesDelCurso();
+    
+    agregarActividad('estudiante_agregado', `Estudiante "${nombreEstudiante}" agregado`, { estudianteId: userId });
+  } catch (error) {
+    // Manejo de errores detallado
+  }
+};
+
+PROPÓSITO:
+Agrega un estudiante al curso actual.
+
+PROCESO:
+1. Verifica que haya un curso seleccionado
+2. Extrae el userId del estudiante
+3. Llama a boardsAPI.addStudent() para agregarlo al backend
+4. Espera 200ms para asegurar que el backend haya actualizado
+5. Recarga los estudiantes del curso
+6. Registra la actividad
+
+FUNCIÓN: actualizarTareas (Líneas 717-748)
+------------------------------------------
+const actualizarTareas = (nuevasTareas) => {
+  try {
+    // Validar que nuevasTareas sea un objeto válido
+    if (!nuevasTareas || typeof nuevasTareas !== 'object' || Array.isArray(nuevasTareas)) {
+      console.error('Error: nuevasTareas no es un objeto válido', nuevasTareas);
+      return;
+    }
+    
+    // Validar estructura
+    const estructuraEsperada = ['pendiente', 'progreso', 'completada'];
+    const tieneEstructuraCorrecta = estructuraEsperada.every(
+      key => key in nuevasTareas && Array.isArray(nuevasTareas[key])
+    );
+    
+    if (!tieneEstructuraCorrecta) {
+      // Normalizar estructura
+      const tareasValidadas = {
+        pendiente: Array.isArray(nuevasTareas.pendiente) ? nuevasTareas.pendiente : [],
+        progreso: Array.isArray(nuevasTareas.progreso) ? nuevasTareas.progreso : [],
+        completada: Array.isArray(nuevasTareas.completada) ? nuevasTareas.completada : []
+      };
+      setTareas(tareasValidadas);
+      return;
+    }
+    
+    setTareas(nuevasTareas);
+  } catch (error) {
+    console.error('Error al actualizar tareas:', error);
+    alert('Error al actualizar las tareas. Por favor, recarga la página.');
+  }
+};
+
+PROPÓSITO:
+Actualiza el estado de tareas con validación de estructura.
+
+PROCESO:
+1. Valida que nuevasTareas sea un objeto válido
+2. Verifica que tenga la estructura correcta (pendiente, progreso, completada)
+3. Si falta alguna clave, la inicializa con array vacío
+4. Actualiza el estado
+
+FUNCIÓN: obtenerTareasFiltradas (Líneas 751-779)
+-------------------------------------------------
+const obtenerTareasFiltradas = () => {
+  if (usuario.rol === 'docente' || filtro === 'todas') {
+    return tareas;
+  }
+  
+  const ahora = new Date();
+  const tareasFiltradas = { pendiente: [], progreso: [], completada: [] };
+  
+  Object.keys(tareas).forEach(estado => {
+    tareasFiltradas[estado] = tareas[estado].filter(tarea => {
+      if (filtro === 'mis-asignaciones') {
+        const asignadoA = typeof tarea.asignadoA === 'object' 
+          ? (tarea.asignadoA?.nombre || tarea.asignadoA?.username || '')
+          : (tarea.asignadoA || '');
+        return asignadoA === (usuario?.nombre || '');
+      }
+      if (filtro === 'proximas-vencer') {
+        if (!tarea.fechaVencimiento) return false;
+        const fechaVenc = new Date(tarea.fechaVencimiento);
+        const diasRestantes = Math.ceil((fechaVenc - ahora) / (1000 * 60 * 60 * 24));
+        return diasRestantes <= 7 && diasRestantes >= 0;
+      }
+      return true;
+    });
+  });
+  
+  return tareasFiltradas;
+};
+
+PROPÓSITO:
+Filtra las tareas según el filtro seleccionado (solo para estudiantes).
+
+FILTROS:
+- 'todas': Retorna todas las tareas (o si es docente)
+- 'mis-asignaciones': Solo tareas asignadas al estudiante actual
+- 'proximas-vencer': Solo tareas que vencen en los próximos 7 días
+
+================================================================================
+DRAG AND DROP
+================================================================================
+
+FUNCIÓN: handleDragStart (Líneas 783-786)
+------------------------------------------
+const handleDragStart = (event) => {
+  const { active } = event;
+  setActiveId(active.id);
+};
+
+PROPÓSITO:
+Se ejecuta cuando comienza a arrastrarse una tarea.
+
+ACCIÓN:
+- Guarda el ID de la tarea que se está arrastrando en activeId
+- Esto se usa para mostrar un preview durante el arrastre
+
+FUNCIÓN: handleDragCancel (Líneas 788-790)
+-------------------------------------------
+const handleDragCancel = () => {
+  setActiveId(null);
+};
+
+PROPÓSITO:
+Se ejecuta cuando se cancela el arrastre.
+
+ACCIÓN:
+- Limpia el activeId
+
+FUNCIÓN: handleDragEnd (Líneas 792-1039)
+-----------------------------------------
+const handleDragEnd = async (event) => {
+  const { active } = event;
+  setActiveId(null);
+  
+  try {
+    const { active, over } = event;
+    
+    if (!over || active.id === over.id) return;
+    
+    // Encontrar la tarea que se está arrastrando
+    let tarea = null;
+    let estadoOrigen = null;
+    
+    Object.keys(tareas).forEach(estado => {
+      const encontrada = tareas[estado].find(t => t.id.toString() === active.id);
+      if (encontrada) {
+        tarea = encontrada;
+        estadoOrigen = estado;
+      }
+    });
+    
+    if (!tarea) return;
+    
+    // Determinar el estado destino
+    let estadoDestino = null;
+    
+    if (['pendiente', 'progreso', 'completada'].includes(over.id)) {
+      estadoDestino = over.id;
+    } else {
+      // Si over.id es el ID de una tarea, encontrar en qué columna está
+      Object.keys(tareas).forEach(estado => {
+        const tareaDestino = tareas[estado].find(t => t.id.toString() === over.id);
+        if (tareaDestino) {
+          estadoDestino = estado;
+        }
+      });
+    }
+    
+    if (!estadoDestino || !['pendiente', 'progreso', 'completada'].includes(estadoDestino)) {
+      return;
+    }
+    
+    if (estadoDestino === estadoOrigen) return;
+    
+    // Obtener el ID de la lista destino
+    const listaDestinoId = listsMap[estadoDestino];
+    if (!listaDestinoId) {
+      alert('Error: No se pudo encontrar la lista de destino.');
+      return;
+    }
+    
+    // Actualizar el estado local inmediatamente
+    setTareas((prev) => {
+      // Validar estructura
+      // Remover de estado origen
+      // Agregar al destino
+      return nuevas;
+    });
+    
+    // Actualizar en el backend
+    const cardActualizada = await cardsAPI.update(tarea.id, {
+      list: listaDestinoId
+    });
+    
+    // Actualizar el estado local con la respuesta del backend
+    // ... código de actualización ...
+    
+    // Registrar actividad
+    agregarActividad('tarea_movida', `Tarea "${tarea.texto}" movida...`, {...});
+  } catch (error) {
+    // Manejo de errores y reversión del cambio local
+  }
+};
+
+PROPÓSITO:
+Se ejecuta cuando se completa el arrastre de una tarea. Mueve la tarea entre
+columnas tanto en el estado local como en el backend.
+
+PROCESO:
+1. Obtiene la tarea que se arrastró y su estado origen
+2. Determina el estado destino según donde se soltó
+3. Valida que el destino sea válido
+4. Actualiza el estado local inmediatamente (optimistic update)
+5. Actualiza en el backend
+6. Sincroniza con la respuesta del backend
+7. Si hay error, revierte el cambio local
+8. Registra la actividad
+
+================================================================================
+RENDERIZADO CONDICIONAL
+================================================================================
+
+Líneas 1042-1081: Si no hay curso seleccionado
+-----------------------------------------------
+if (!cursoActual) {
+  if (usuario.rol === 'docente') {
+    return <GestionCursos ... />;
+  }
+  if (usuario.rol === 'estudiante') {
+    return <div>No hay cursos disponibles</div>;
+  }
+}
+
+PROPÓSITO:
+Muestra diferentes vistas según el rol si no hay curso seleccionado.
+
+Líneas 1083-1345: Vista principal del tablero
+----------------------------------------------
+return (
+  <div>
+    {/* Header con título y botones */}
+    {/* Componentes condicionales (Historial, Calificaciones, Filtros) */}
+    {/* GestionCursos (solo docentes) */}
+    {/* NuevaTarea (solo docentes) */}
+    {/* DndContext con las 3 columnas */}
+  </div>
+);
+
+ESTRUCTURA:
+1. Header (Líneas 1093-1181):
+   - Título del curso
+   - Botones según rol (Gestionar Cursos, Historial, Calificaciones)
+
+2. Componentes condicionales (Líneas 1183-1206):
+   - HistorialActividad (si mostrarHistorial)
+   - Calificaciones (si mostrarCalificaciones)
+   - FiltrosEstudiante (si es estudiante y no muestra calificaciones)
+
+3. GestionCursos (Líneas 1208-1222):
+   - Solo para docentes
+   - Modo compacto
+
+4. NuevaTarea (Líneas 1224-1236):
+   - Solo para docentes
+   - Formulario para crear tareas
+
+5. DndContext (Líneas 1238-1343):
+   - Contexto de drag and drop
+   - Grid con 3 columnas (Pendiente, En Progreso, Completada)
+   - DragOverlay para mostrar preview durante arrastre
+
+================================================================================
+COMPONENTE 3: NuevaTarea.jsx
+================================================================================
+
+ARCHIVO: react/gestor-tareas/src/NuevaTarea.jsx
+LÍNEAS TOTALES: 518
+
+NOTA: Este componente ya está documentado en detalle en el archivo 
+"documentacion.txt". Aquí se incluye un resumen.
+
+DESCRIPCIÓN GENERAL:
+-------------------
+Componente que permite crear nuevas tareas con asignación múltiple de 
+estudiantes, etiquetas, fechas de vencimiento y descripción.
+
+FUNCIONALIDADES PRINCIPALES:
+1. Creación de tareas con título y descripción
+2. Asignación múltiple de estudiantes mediante checkboxes
+3. Selección de fecha de vencimiento
+4. Gestión de etiquetas (seleccionar existentes o crear nuevas)
+5. Creación de una tarea por cada estudiante seleccionado
+
+FUNCIÓN PRINCIPAL: agregar() (Líneas 28-150)
+---------------------------------------------
+- Valida que el título no esté vacío
+- Prepara lista de estudiantes (o [null] si no hay seleccionados)
+- Gestiona el board y lista "Pendiente"
+- Crea una tarea en el backend por cada estudiante seleccionado
+- Actualiza el estado local
+- Limpia el formulario
+
+CARACTERÍSTICAS DESTACADAS:
+- Selección múltiple de estudiantes con checkboxes
+- Contador de estudiantes seleccionados
+- Creación automática de etiquetas predefinidas si no existen
+- Integración completa con el backend
+
+================================================================================
+COMPONENTE 4: TareaIndividual.jsx
+================================================================================
+
+ARCHIVO: react/gestor-tareas/src/TareaIndividual.jsx
+LÍNEAS TOTALES: 1098
+
+DESCRIPCIÓN GENERAL:
+-------------------
+Componente que representa una tarea individual. Permite visualizar, editar,
+calificar, y gestionar etiquetas y comentarios de cada tarea.
+
+================================================================================
+IMPORTS Y DEPENDENCIAS
+================================================================================
+
+Líneas 1-6: Importaciones
+--------------------------
+- useState: Hook para estado
+- useSortable: Hook de @dnd-kit para drag and drop
+- CSS: Utilidades de @dnd-kit
+- useTheme: Hook para tema
+- Comentarios: Componente de comentarios
+- cardsAPI, labelsAPI, commentsAPI: Funciones de API
+
+Líneas 9-16: ETIQUETAS_PREDEFINIDAS
+------------------------------------
+Constante con etiquetas predefinidas y sus iconos/colores.
+
+================================================================================
+DECLARACIÓN Y PARÁMETROS
+================================================================================
+
+Línea 18: Declaración
+---------------------
+function TareaIndividual({ tarea, onEditar, onEliminar, onMover, onAsignar, 
+                           estado, usuario, etiquetas = [], onTareaActualizada, 
+                           boardId })
+
+PARÁMETROS:
+- tarea: Objeto con datos de la tarea
+- onEditar: Callback para editar la tarea
+- onEliminar: Callback para eliminar la tarea
+- onMover: Callback para mover la tarea
+- onAsignar: Callback para asignar la tarea
+- estado: Estado actual de la tarea ('pendiente', 'progreso', 'completada')
+- usuario: Objeto del usuario actual
+- etiquetas: Array de etiquetas disponibles
+- onTareaActualizada: Callback para recargar tareas
+- boardId: ID del board actual
+
+================================================================================
+ESTADOS DEL COMPONENTE
+================================================================================
+
+Línea 20: editando
+------------------
+const [editando, setEditando] = useState(false);
+Controla si la tarea está en modo edición.
+
+Línea 21: nuevoTexto
+--------------------
+const [nuevoTexto, setNuevoTexto] = useState(tarea.texto);
+Título de la tarea en edición.
+
+Línea 22: nuevaDescripcion
+---------------------------
+const [nuevaDescripcion, setNuevaDescripcion] = useState(tarea.descripcion || '');
+Descripción de la tarea en edición.
+
+Línea 23: nuevaFechaVencimiento
+-------------------------------
+const [nuevaFechaVencimiento, setNuevaFechaVencimiento] = useState(tarea.fechaVencimiento || '');
+Fecha de vencimiento en edición.
+
+Líneas 24-26: nuevasEtiquetasSeleccionadas
+-------------------------------------------
+const [nuevasEtiquetasSeleccionadas, setNuevasEtiquetasSeleccionadas] = useState(
+  (tarea.labels || []).map(l => typeof l === 'object' ? l.id : l)
+);
+Array de IDs de etiquetas seleccionadas en edición.
+
+Líneas 27-29: Estados para crear etiqueta
+-------------------------------------------
+- creandoEtiqueta: Controla si se muestra el formulario de nueva etiqueta
+- nombreNuevaEtiqueta: Nombre de la etiqueta a crear
+- colorNuevaEtiqueta: Color de la etiqueta a crear
+
+Líneas 31-36: Función getAsignadoAString
+-----------------------------------------
+const getAsignadoAString = (asignadoA) => {
+  if (!asignadoA) return '';
+  if (typeof asignadoA === 'string') return asignadoA;
+  if (typeof asignadoA === 'object') return asignadoA?.nombre || asignadoA?.username || '';
+  return String(asignadoA);
+};
+
+PROPÓSITO:
+Normaliza el campo asignadoA a string para evitar errores de tipo.
+
+Línea 38: nuevoAsignadoA
+-------------------------
+const [nuevoAsignadoA, setNuevoAsignadoA] = useState(getAsignadoAString(tarea.asignadoA));
+Estudiante asignado en edición.
+
+Líneas 39-41: Estados de calificación
+--------------------------------------
+- calificacion: Calificación seleccionada
+- comentarioCalificacion: Comentario/nota de la calificación
+- calificando: Controla si se muestra el formulario de calificación
+
+Líneas 43-44: Drag and drop
+---------------------------
+const dragEnabled = usuario.rol !== 'docente';
+Deshabilita drag and drop para docentes.
+
+Líneas 46-56: useSortable
+--------------------------
+const {
+  attributes,
+  listeners,
+  setNodeRef,
+  transform,
+  transition,
+  isDragging,
+} = useSortable({ 
+  id: tarea.id.toString(),
+  disabled: !dragEnabled
+});
+
+PROPÓSITO:
+Configura el drag and drop de la tarea. Deshabilitado para docentes.
+
+================================================================================
+FUNCIONES PRINCIPALES
+================================================================================
+
+FUNCIÓN: guardarEdicion (Líneas 65-105)
+---------------------------------------
+const guardarEdicion = async () => {
+  try {
+    if (!nuevoTexto || nuevoTexto.trim() === '') {
+      alert('El título de la tarea no puede estar vacío.');
+      return;
+    }
+    
+    if (!onEditar) {
+      alert('Error: No se puede editar la tarea.');
+      return;
+    }
+    
+    await onEditar(tarea.id, {
+      texto: nuevoTexto.trim(),
+      descripcion: nuevaDescripcion.trim(),
+      fechaVencimiento: nuevaFechaVencimiento || null,
+      asignadoA: nuevoAsignadoA ? nuevoAsignadoA.trim() : null,
+      label_ids: nuevasEtiquetasSeleccionadas
+    });
+    
+    setEditando(false);
+  } catch (error) {
+    console.error('Error al guardar edición:', error);
+    alert('Error al guardar los cambios.');
+  }
+};
+
+PROPÓSITO:
+Guarda los cambios realizados en la edición de la tarea.
+
+PROCESO:
+1. Valida que el título no esté vacío
+2. Verifica que onEditar esté definido
+3. Llama a onEditar con los datos actualizados
+4. Cierra el modo edición
+5. Maneja errores
+
+FUNCIÓN: cancelarEdicion (Líneas 107-117)
+-----------------------------------------
+const cancelarEdicion = () => {
+  setNuevoTexto(tarea.texto);
+  setNuevaDescripcion(tarea.descripcion || '');
+  setNuevaFechaVencimiento(tarea.fechaVencimiento || '');
+  setNuevoAsignadoA(getAsignadoAString(tarea.asignadoA));
+  setNuevasEtiquetasSeleccionadas((tarea.labels || []).map(l => typeof l === 'object' ? l.id : l));
+  setEditando(false);
+  setCreandoEtiqueta(false);
+  setNombreNuevaEtiqueta('');
+  setColorNuevaEtiqueta('#3498db');
+};
+
+PROPÓSITO:
+Cancela la edición y restaura los valores originales.
+
+FUNCIÓN: esProximaAVencer (Líneas 119-125)
+-------------------------------------------
+const esProximaAVencer = () => {
+  if (!tarea.fechaVencimiento) return false;
+  const ahora = new Date();
+  const fechaVenc = new Date(tarea.fechaVencimiento);
+  const diasRestantes = Math.ceil((fechaVenc - ahora) / (1000 * 60 * 60 * 24));
+  return diasRestantes <= 7 && diasRestantes >= 0;
+};
+
+PROPÓSITO:
+Determina si la tarea vence en los próximos 7 días.
+
+FUNCIÓN: estaVencida (Líneas 127-132)
+-------------------------------------
+const estaVencida = () => {
+  if (!tarea.fechaVencimiento) return false;
+  const ahora = new Date();
+  const fechaVenc = new Date(tarea.fechaVencimiento);
+  return fechaVenc < ahora && estado !== 'completada';
+};
+
+PROPÓSITO:
+Determina si la tarea está vencida (y no está completada).
+
+FUNCIÓN: toggleEtiqueta (Líneas 141-170)
+-----------------------------------------
+const toggleEtiqueta = async (etiquetaId) => {
+  if (usuario.rol !== 'docente') return;
+  
+  try {
+    const etiquetasActuales = (tarea.labels || []).map(l => typeof l === 'object' ? l.id : l);
+    const tieneEtiqueta = etiquetasActuales.includes(etiquetaId);
+    
+    let nuevasEtiquetasIds;
+    if (tieneEtiqueta) {
+      nuevasEtiquetasIds = etiquetasActuales.filter(id => id !== etiquetaId);
+    } else {
+      nuevasEtiquetasIds = [...etiquetasActuales, etiquetaId];
+    }
+    
+    await cardsAPI.update(tarea.id, {
+      label_ids: nuevasEtiquetasIds
+    });
+    
+    if (onTareaActualizada) {
+      onTareaActualizada();
+    }
+  } catch (error) {
+    console.error('Error al actualizar etiquetas:', error);
+    alert('Error al actualizar las etiquetas.');
+  }
+};
+
+PROPÓSITO:
+Asigna o desasigna una etiqueta a la tarea (solo docentes).
+
+FUNCIÓN: crearNuevaEtiqueta (Líneas 173-209)
+---------------------------------------------
+const crearNuevaEtiqueta = async () => {
+  if (!nombreNuevaEtiqueta.trim()) {
+    alert('Por favor, ingresa un nombre para la etiqueta.');
+    return;
+  }
+  
+  if (!boardId) {
+    alert('Error: No hay curso seleccionado.');
+    return;
+  }
+  
+  try {
+    const nuevaEtiqueta = await labelsAPI.create({
+      board: boardId,
+      name: nombreNuevaEtiqueta.trim(),
+      color: colorNuevaEtiqueta
+    });
+    
+    const etiquetasActuales = (tarea.labels || []).map(l => typeof l === 'object' ? l.id : l);
+    await cardsAPI.update(tarea.id, {
+      label_ids: [...etiquetasActuales, nuevaEtiqueta.id]
+    });
+    
+    setNombreNuevaEtiqueta('');
+    setColorNuevaEtiqueta('#3498db');
+    setCreandoEtiqueta(false);
+    
+    if (onTareaActualizada) {
+      onTareaActualizada();
+    }
+  } catch (error) {
+    console.error('Error al crear etiqueta:', error);
+    alert('Error al crear la etiqueta.');
+  }
+};
+
+PROPÓSITO:
+Crea una nueva etiqueta y la asigna a la tarea.
+
+FUNCIÓN: guardarCalificacion (Líneas 212-251)
+----------------------------------------------
+const guardarCalificacion = async () => {
+  if (!calificacion) {
+    alert('Por favor, selecciona una calificación.');
+    return;
+  }
+  
+  try {
+    // Guardar la calificación en la card
+    await cardsAPI.update(tarea.id, {
+      grade: calificacion
+    });
+    
+    // Si hay un comentario, crearlo automáticamente
+    if (comentarioCalificacion.trim()) {
+      try {
+        const calInfo = getCalificacionInfo(calificacion);
+        const textoComentario = `📊 Calificación: ${calInfo ? calInfo.texto : calificacion}\n\n${comentarioCalificacion.trim()}`;
+        
+        await commentsAPI.create({
+          card: tarea.id,
+          content: textoComentario
+        });
+      } catch (error) {
+        console.error('Error al crear comentario de calificación:', error);
+      }
+    }
+    
+    setCalificando(false);
+    setComentarioCalificacion('');
+    
+    if (onTareaActualizada) {
+      onTareaActualizada();
+    }
+  } catch (error) {
+    console.error('Error al guardar calificación:', error);
+    alert('Error al guardar la calificación.');
+  }
+};
+
+PROPÓSITO:
+Guarda la calificación de la tarea y opcionalmente crea un comentario con la nota.
+
+PROCESO:
+1. Valida que haya una calificación seleccionada
+2. Actualiza la card con la calificación
+3. Si hay comentario, crea un comentario automáticamente con formato especial
+4. Limpia el formulario
+5. Recarga las tareas
+
+FUNCIÓN: getCalificacionInfo (Líneas 254-262)
+----------------------------------------------
+const getCalificacionInfo = (grade) => {
+  const calificacionesMap = {
+    'bueno': { color: '#4caf50', emoji: '✅', texto: 'Bueno' },
+    'malo': { color: '#f44336', emoji: '❌', texto: 'Malo' },
+    'pesimo': { color: '#d32f2f', emoji: '⚠️', texto: 'Pésimo' },
+    'necesita_mejorar': { color: '#ff9800', emoji: '⚠️', texto: 'Necesita Mejorar' }
+  };
+  return calificacionesMap[grade] || null;
+};
+
+PROPÓSITO:
+Obtiene la información visual (color, emoji, texto) de una calificación.
+
+================================================================================
+RENDERIZADO
+================================================================================
+
+MODO EDICIÓN (Líneas 264-562)
+------------------------------
+if (editando) {
+  return (
+    <div>
+      {/* Inputs para editar título, descripción, fecha */}
+      {/* Selector de etiquetas */}
+      {/* Botones Guardar/Cancelar */}
+    </div>
+  );
+}
+
+MODO VISUALIZACIÓN (Líneas 571-1094)
+-------------------------------------
+return (
+  <div ref={setNodeRef} {...attributes} {...(dragEnabled ? listeners : {})}>
+    {/* Título de la tarea */}
+    {/* Descripción */}
+    {/* Información de asignación */}
+    {/* Fecha de vencimiento con indicadores visuales */}
+    {/* Etiquetas asignadas */}
+    {/* Calificación (solo si está completada) */}
+    {/* Mensaje de drag and drop (solo estudiantes) */}
+    {/* Componente Comentarios */}
+    {/* Botones Editar/Eliminar (solo docentes) */}
+  </div>
+);
+
+CARACTERÍSTICAS VISUALES:
+- Fondo rojizo si está vencida
+- Borde rojo si está vencida
+- Borde naranja si está próxima a vencer
+- Etiquetas con iconos y colores
+- Calificación con emoji y color según el tipo
+- Comentarios integrados
+
+================================================================================
+COMPONENTE 5: Columna.jsx
+================================================================================
+
+ARCHIVO: react/gestor-tareas/src/Columna.jsx
+LÍNEAS TOTALES: 499
+
+DESCRIPCIÓN GENERAL:
+-------------------
+Componente que representa una columna del tablero (Pendiente, En Progreso, 
+Completada). Gestiona las tareas dentro de cada columna y proporciona 
+funcionalidades de drag and drop.
+
+================================================================================
+IMPORTS Y DEPENDENCIAS
+================================================================================
+
+Líneas 1-5: Importaciones
+--------------------------
+- useDroppable: Hook de @dnd-kit para hacer la columna droppable
+- SortableContext: Contexto para ordenar elementos dentro de la columna
+- TareaIndividual: Componente de tarea individual
+- useTheme: Hook para tema
+- cardsAPI: Funciones de API para cards
+
+================================================================================
+DECLARACIÓN Y PARÁMETROS
+================================================================================
+
+Línea 7: Declaración
+--------------------
+function Columna({ titulo, tareas, setTareas, estado, usuario, onActividad, 
+                   listsMap, cursoId, onTareaMovida, etiquetas })
+
+PARÁMETROS:
+- titulo: Título de la columna ("Pendiente", "En Progreso", "Completada")
+- tareas: Array de tareas en esta columna
+- setTareas: Función para actualizar el estado de tareas
+- estado: Estado de la columna ('pendiente', 'progreso', 'completada')
+- usuario: Objeto del usuario actual
+- onActividad: Callback para registrar actividades
+- listsMap: Mapa de estados a IDs de listas
+- cursoId: ID del curso actual
+- onTareaMovida: Callback para recargar tareas
+- etiquetas: Array de etiquetas disponibles
+
+================================================================================
+HOOKS
+================================================================================
+
+Líneas 9-11: useDroppable
+--------------------------
+const { setNodeRef } = useDroppable({
+  id: estado,
+});
+
+PROPÓSITO:
+Hace que la columna sea un área donde se pueden soltar tareas arrastradas.
+
+================================================================================
+FUNCIONES PRINCIPALES
+================================================================================
+
+FUNCIÓN: moverTarea (Líneas 13-95)
+-----------------------------------
+const moverTarea = async (tarea, destino) => {
+  try {
+    if (!tarea || !destino) {
+      alert('Error: No se pudo mover la tarea.');
+      return;
+    }
+    
+    const listaDestinoId = listsMap[destino];
+    if (!listaDestinoId) {
+      alert('Error: No se pudo encontrar la lista de destino.');
+      return;
+    }
+    
+    await cardsAPI.update(tarea.id, {
+      list: listaDestinoId
+    });
+    
+    // Actualizar el estado local inmediatamente
+    setTareas((prev) => {
+      const nuevas = { ...prev };
+      Object.keys(nuevas).forEach(key => {
+        nuevas[key] = nuevas[key].filter((t) => t.id !== tarea.id);
+      });
+      nuevas[destino] = [...nuevas[destino], tarea];
+      return nuevas;
+    });
+    
+    if (onTareaMovida) {
+      onTareaMovida();
+    }
+    
+    if (onActividad) {
+      onActividad('tarea_movida', `Tarea "${tarea.texto}" movida a ${destino}`, {...});
+    }
+  } catch (error) {
+    // Manejo de errores detallado
+  }
+};
+
+PROPÓSITO:
+Mueve una tarea a otra columna (estado).
+
+PROCESO:
+1. Valida parámetros
+2. Obtiene el ID de la lista destino
+3. Actualiza la card en el backend
+4. Actualiza el estado local (optimistic update)
+5. Notifica al componente padre
+6. Registra la actividad
+
+FUNCIÓN: editarTarea (Líneas 97-282)
+------------------------------------
+const editarTarea = async (id, datosActualizados) => {
+  try {
+    if (!id || !datosActualizados) {
+      alert('Error: No se pudo editar la tarea.');
+      return;
+    }
+    
+    const tareaActual = tareas.find(t => t.id === id);
+    if (!tareaActual) {
+      alert('Error: La tarea no se encontró.');
+      return;
+    }
+    
+    const listaActualId = listsMap[estado];
+    if (!listaActualId) {
+      alert('Error: No se pudo encontrar la lista actual.');
+      return;
+    }
+    
+    // Preparar datos para actualizar
+    let fechaVencimientoFormateada = null;
+    if (datosActualizados.fechaVencimiento) {
+      const fecha = new Date(datosActualizados.fechaVencimiento);
+      if (!isNaN(fecha.getTime())) {
+        fechaVencimientoFormateada = fecha.toISOString();
+      }
+    }
+    
+    const datosBackend = {
+      title: datosActualizados.texto || tareaActual.texto,
+      description: datosActualizados.descripcion !== undefined ? datosActualizados.descripcion : (tareaActual.descripcion || ''),
+      due_date: fechaVencimientoFormateada,
+      list: listaActualId,
+      label_ids: datosActualizados.label_ids !== undefined ? datosActualizados.label_ids : (tareaActual.labels || []).map(l => typeof l === 'object' ? l.id : l),
+      assigned_to_id: datosActualizados.asignadoAId !== undefined ? datosActualizados.asignadoAId : (tareaActual.asignadoAId || null)
+    };
+    
+    // Actualizar en el backend
+    const cardActualizada = await cardsAPI.update(id, datosBackend);
+    
+    // Actualizar el estado local
+    const tareaActualizada = {
+      id: cardActualizada.id,
+      texto: cardActualizada.title,
+      descripcion: cardActualizada.description || '',
+      asignadoA: cardActualizada.assigned_to ? (...) : null,
+      asignadoAId: cardActualizada.assigned_to ? cardActualizada.assigned_to.id : null,
+      fechaVencimiento: cardActualizada.due_date || null,
+      cursoId: cardActualizada.list?.board?.id || cursoId,
+      labels: cardActualizada.labels || [],
+      grade: cardActualizada.grade || null
+    };
+    
+    setTareas((prev) => {
+      const nuevas = { ...prev };
+      
+      // Buscar y actualizar la tarea en todas las columnas
+      Object.keys(nuevas).forEach(estadoKey => {
+        const index = nuevas[estadoKey].findIndex(t => t.id === id);
+        if (index !== -1) {
+          nuevas[estadoKey][index] = tareaActualizada;
+        }
+      });
+      
+      // Verificar si la tarea cambió de columna según el backend
+      const listTitle = cardActualizada.list?.title?.toLowerCase() || '';
+      let nuevaColumna = null;
+      
+      if (listTitle.includes('pendiente')) {
+        nuevaColumna = 'pendiente';
+      } else if (listTitle.includes('progreso')) {
+        nuevaColumna = 'progreso';
+      } else if (listTitle.includes('completada')) {
+        nuevaColumna = 'completada';
+      }
+      
+      // Si la columna cambió, mover la tarea
+      if (nuevaColumna && nuevaColumna !== estado) {
+        Object.keys(nuevas).forEach(estadoKey => {
+          nuevas[estadoKey] = nuevas[estadoKey].filter(t => t.id !== id);
+        });
+        nuevas[nuevaColumna].push(tareaActualizada);
+      }
+      
+      return nuevas;
+    });
+    
+    if (onActividad) {
+      onActividad('tarea_editada', `Tarea "${cardActualizada.title}" actualizada`, {...});
+    }
+  } catch (error) {
+    // Manejo de errores detallado
+  }
+};
+
+PROPÓSITO:
+Edita una tarea en el backend y actualiza el estado local.
+
+PROCESO:
+1. Valida parámetros y encuentra la tarea
+2. Obtiene el ID de la lista actual
+3. Formatea la fecha de vencimiento a ISO
+4. Prepara los datos para el backend
+5. Actualiza en el backend
+6. Actualiza el estado local con la respuesta
+7. Verifica si la tarea cambió de columna y la mueve si es necesario
+8. Registra la actividad
+
+FUNCIÓN: eliminarTarea (Líneas 284-338)
+---------------------------------------
+const eliminarTarea = async (id) => {
+  try {
+    if (!id) {
+      alert('Error: No se pudo eliminar la tarea.');
+      return;
+    }
+    
+    const tarea = tareas.find(t => t.id === id);
+    if (!tarea) {
+      alert('Error: La tarea no se encontró.');
+      return;
+    }
+    
+    if (window.confirm(`¿Estás seguro de que quieres eliminar la tarea "${tarea.texto}"?`)) {
+      await cardsAPI.delete(id);
+      
+      if (onTareaMovida) {
+        onTareaMovida();
+      }
+    }
+  } catch (error) {
+    // Manejo de errores detallado
+  }
+};
+
+PROPÓSITO:
+Elimina una tarea del backend después de confirmación.
+
+PROCESO:
+1. Valida el ID
+2. Encuentra la tarea
+3. Muestra confirmación
+4. Si confirma, elimina en el backend
+5. Notifica al componente padre para recargar
+
+FUNCIÓN: asignarTarea (Líneas 340-374)
+---------------------------------------
+const asignarTarea = (id, estudiante) => {
+  try {
+    if (!id) {
+      alert('Error: No se pudo asignar la tarea.');
+      return;
+    }
+    
+    const nombreEstudiante = typeof estudiante === 'object' 
+      ? (estudiante.nombre || estudiante.username || '')
+      : (estudiante || '');
+    
+    setTareas((prev) => {
+      const nuevas = { ...prev };
+      nuevas[estado] = nuevas[estado].map(t => 
+        t.id === id ? { ...t, asignadoA: nombreEstudiante } : t
+      );
+      return nuevas;
+    });
+    
+    if (onActividad) {
+      const tarea = tareas.find(t => t.id === id);
+      if (tarea) {
+        onActividad('tarea_asignada', `Tarea "${tarea.texto}" asignada a ${nombreEstudiante}`, {...});
+      }
+    }
+  } catch (error) {
+    console.error('Error al asignar tarea:', error);
+    alert('Error al asignar la tarea.');
+  }
+};
+
+PROPÓSITO:
+Asigna una tarea a un estudiante (actualización local).
+
+FUNCIÓN: getColorFondo (Líneas 376-392)
+----------------------------------------
+const getColorFondo = () => {
+  if (isDark) {
+    switch(estado) {
+      case 'pendiente': return '#1e3a5f';
+      case 'progreso': return '#5a3a1e';
+      case 'completada': return '#1e4a2e';
+      default: return '#2d2d2d';
+    }
+  } else {
+    switch(estado) {
+      case 'pendiente': return '#e3f2fd';
+      case 'progreso': return '#fff3e0';
+      case 'completada': return '#e8f5e8';
+      default: return '#f5f5f5';
+    }
+  }
+};
+
+PROPÓSITO:
+Retorna el color de fondo de la columna según el estado y tema.
+
+FUNCIÓN: getColorBorde (Líneas 394-401)
+---------------------------------------
+const getColorBorde = () => {
+  switch(estado) {
+    case 'pendiente': return '#2196f3';
+    case 'progreso': return '#ff9800';
+    case 'completada': return '#4caf50';
+    default: return isDark ? '#555' : '#ddd';
+  }
+};
+
+PROPÓSITO:
+Retorna el color del borde de la columna según el estado.
+
+================================================================================
+RENDERIZADO
+================================================================================
+
+Líneas 405-496: Estructura de la columna
+-----------------------------------------
+return (
+  <div ref={setNodeRef} style={{...}}>
+    <h2>{titulo} ({tareas.length})</h2>
+    
+    <div style={{ flex: 1, overflowY: 'auto' }}>
+      {usuario.rol === 'docente' ? (
+        // Para docentes: sin SortableContext (drag deshabilitado)
+        tareas.length === 0 ? (
+          <p>No hay tareas en esta columna</p>
+        ) : (
+          tareas.map((tarea) => (
+            <TareaIndividual key={tarea.id} {...props} />
+          ))
+        )
+      ) : (
+        // Para estudiantes: con SortableContext (drag habilitado)
+        <SortableContext items={tareaIds} strategy={verticalListSortingStrategy}>
+          {tareas.length === 0 ? (
+            <p>No hay tareas en esta columna</p>
+          ) : (
+            tareas.map((tarea) => (
+              <TareaIndividual key={tarea.id} {...props} />
+            ))
+          )}
+        </SortableContext>
+      )}
+    </div>
+  </div>
+);
+
+CARACTERÍSTICAS:
+- Columna con fondo y borde según estado
+- Título con contador de tareas
+- Área scrollable para las tareas
+- Drag and drop deshabilitado para docentes
+- Drag and drop habilitado para estudiantes
+- Renderiza TareaIndividual para cada tarea
+
+================================================================================
+RESUMEN DE FLUJO DE DATOS
+================================================================================
+
+FLUJO GENERAL:
+1. App.jsx → Maneja autenticación y rutas
+2. Tablero.jsx → Coordina todo el sistema
+   - Carga cursos, estudiantes, tareas, etiquetas
+   - Gestiona drag and drop
+   - Coordina componentes hijos
+3. NuevaTarea.jsx → Crea nuevas tareas
+   - Se comunica con Tablero mediante callbacks
+4. Columna.jsx → Gestiona cada columna
+   - Renderiza TareaIndividual para cada tarea
+   - Maneja operaciones CRUD de tareas
+5. TareaIndividual.jsx → Representa cada tarea
+   - Permite editar, eliminar, calificar
+   - Integra comentarios y etiquetas
+
+COMUNICACIÓN:
+- Props hacia abajo (datos)
+- Callbacks hacia arriba (eventos)
+- API calls para sincronizar con backend
+- Estado local para optimización de UX
+
+================================================================================
+FIN DE LA DOCUMENTACIÓN
+================================================================================
+

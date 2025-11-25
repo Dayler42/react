@@ -1,0 +1,15 @@
+.swagger-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.swagger-container iframe {
+  flex: 1;
+}
+
+/* Estilos adicionales para mejorar la visualización */
+.swagger-container code {
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+}
+

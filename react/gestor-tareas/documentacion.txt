@@ -1,0 +1,405 @@
+================================================================================
+DOCUMENTACIÓN DEL COMPONENTE NuevaTarea.jsx
+================================================================================
+
+Este documento explica cada función, constante y sección del código del componente
+NuevaTarea.jsx, que permite crear nuevas tareas con asignación múltiple de estudiantes.
+
+================================================================================
+IMPORTS Y DEPENDENCIAS
+================================================================================
+
+Líneas 1-3: Importaciones necesarias
+-------------------------------------
+- useState: Hook de React para manejar el estado del componente
+- boardsAPI, listsAPI, cardsAPI, labelsAPI: Funciones de la API para interactuar
+  con el backend (tableros, listas, tarjetas y etiquetas)
+- useTheme: Hook personalizado para obtener el tema actual (claro/oscuro)
+
+================================================================================
+CONSTANTES
+================================================================================
+
+Líneas 6-13: ETIQUETAS_PREDEFINIDAS
+------------------------------------
+Constante que define las etiquetas predefinidas disponibles en el sistema:
+- Examen (rojo oscuro #d32f2f, icono 📝)
+- Entrega Obligatoria (rojo #f44336, icono ⚠️)
+- Importante (naranja #ff9800, icono 🔴)
+- Proyecto (morado #9c27b0, icono 📊)
+- Práctica (azul #2196f3, icono 💻)
+- Lectura (verde #4caf50, icono 📖)
+
+Cada etiqueta tiene un nombre, color hexadecimal e icono emoji.
+
+================================================================================
+FUNCIÓN PRINCIPAL: NuevaTarea
+================================================================================
+
+Línea 15: Declaración del componente
+--------------------------------------
+function NuevaTarea({ setTareas, cursoId, estudiantes, usuario, onActividad, 
+                     listsMap, boardId, onTareaCreada, etiquetas = [] })
+
+Parámetros recibidos:
+- setTareas: Función para actualizar el estado de las tareas
+- cursoId: ID del curso actual
+- estudiantes: Array de estudiantes disponibles
+- usuario: Objeto con información del usuario actual (incluye rol)
+- onActividad: Callback para registrar actividades/eventos
+- listsMap: Mapa de listas del tablero (pendiente, progreso, completada)
+- boardId: ID del tablero actual
+- onTareaCreada: Callback que se ejecuta después de crear una tarea
+- etiquetas: Array de etiquetas disponibles (por defecto vacío)
+
+================================================================================
+ESTADOS DEL COMPONENTE (useState)
+================================================================================
+
+Línea 16: useTheme()
+--------------------
+Obtiene el tema actual (isDark: true/false) para aplicar estilos según el modo.
+
+Línea 17: texto
+--------------
+const [texto, setTexto] = useState('');
+Estado para almacenar el título de la tarea que el usuario está escribiendo.
+
+Línea 18: descripcion
+---------------------
+const [descripcion, setDescripcion] = useState('');
+Estado para almacenar la descripción opcional de la tarea.
+
+Línea 19: estudiantesSeleccionados
+----------------------------------
+const [estudiantesSeleccionados, setEstudiantesSeleccionados] = useState([]);
+Estado que almacena un array con los IDs de los estudiantes seleccionados.
+Permite selección múltiple mediante checkboxes.
+
+Línea 20: fechaVencimiento
+--------------------------
+const [fechaVencimiento, setFechaVencimiento] = useState('');
+Estado para almacenar la fecha de vencimiento de la tarea (formato YYYY-MM-DD).
+
+Línea 21: etiquetasSeleccionadas
+--------------------------------
+const [etiquetasSeleccionadas, setEtiquetasSeleccionadas] = useState([]);
+Estado que almacena un array con los IDs de las etiquetas seleccionadas.
+
+Línea 22: creandoEtiqueta
+-------------------------
+const [creandoEtiqueta, setCreandoEtiqueta] = useState(false);
+Estado booleano que controla si se está mostrando el formulario para crear
+una nueva etiqueta.
+
+Línea 23: nombreNuevaEtiqueta
+------------------------------
+const [nombreNuevaEtiqueta, setNombreNuevaEtiqueta] = useState('');
+Estado para almacenar el nombre de la etiqueta que se está creando.
+
+Línea 24: colorNuevaEtiqueta
+-----------------------------
+const [colorNuevaEtiqueta, setColorNuevaEtiqueta] = useState('#3498db');
+Estado para almacenar el color seleccionado para la nueva etiqueta
+(por defecto azul #3498db).
+
+================================================================================
+VARIABLES DERIVADAS
+================================================================================
+
+Línea 26: estudiantesDelCurso
+------------------------------
+const estudiantesDelCurso = estudiantes?.filter(e => e.cursoId === cursoId) || [];
+
+Filtra los estudiantes para mostrar solo los que pertenecen al curso actual.
+- Usa optional chaining (?.) para evitar errores si estudiantes es null/undefined
+- Compara el cursoId de cada estudiante con el cursoId actual
+- Retorna array vacío si no hay estudiantes
+
+================================================================================
+FUNCIÓN: agregar()
+================================================================================
+
+Líneas 28-150: Función asíncrona principal para crear tareas
+--------------------------------------------------------------
+
+Esta función se ejecuta cuando el usuario hace clic en "Agregar Tarea" o presiona
+Enter en el campo de título.
+
+PROCESO PASO A PASO:
+
+1. Validación inicial (Línea 29)
+   - Verifica que el texto de la tarea no esté vacío (después de trim)
+
+2. Preparación de estudiantes (Líneas 31-33)
+   - Si hay estudiantes seleccionados, los usa
+   - Si no hay estudiantes seleccionados, crea un array con [null] para crear
+     una tarea sin asignar
+
+3. Gestión del Board/Tablero (Líneas 36-81)
+   
+   a) Si existe boardId y listsMap (Líneas 40-43):
+      - Usa el tablero y lista existentes
+      - Obtiene el ID de la lista "Pendiente" desde listsMap
+   
+   b) Si no existe (Líneas 44-80):
+      - Obtiene todos los boards disponibles (Línea 46)
+      - Si hay boards, usa el primero (Línea 47)
+      - Si no hay boards y hay cursoId, crea uno nuevo con el nombre del curso
+        (Líneas 50-52)
+      - Si no se puede obtener o crear el board, lanza un error (Líneas 55-57)
+      - Obtiene todas las listas del board (Línea 60)
+      - Busca la lista "Pendiente" (Líneas 61-64)
+      - Si no existe, la crea (Líneas 67-78)
+
+4. Creación de tareas (Líneas 83-123)
+   
+   Para cada estudiante seleccionado (o null si no hay ninguno):
+   
+   a) Prepara los datos de la card (Líneas 87-95):
+      - list: ID de la lista "Pendiente"
+      - title: Título de la tarea (texto.trim())
+      - description: Descripción de la tarea (descripcion.trim())
+      - assigned_to_id: ID del estudiante (convertido a entero) o null
+      - due_date: Fecha de vencimiento o null
+      - position: 0 (posición inicial)
+      - label_ids: Array de IDs de etiquetas seleccionadas
+   
+   b) Crea la card en el backend (Línea 97):
+      - Llama a cardsAPI.create() con los datos preparados
+      - Espera la respuesta del servidor
+   
+   c) Busca información del estudiante (Líneas 100-102):
+      - Si hay estudianteId, busca el estudiante en estudiantesDelCurso
+      - Compara userId o id según esté disponible
+   
+   d) Crea objeto de tarea local (Líneas 105-113):
+      - id: ID de la card creada en el backend
+      - texto: Título de la card
+      - descripcion: Descripción de la card
+      - asignadoA: Nombre del usuario asignado (username o first_name)
+      - asignadoAId: ID del usuario asignado
+      - fechaVencimiento: Fecha de vencimiento
+      - cursoId: ID del curso actual
+   
+   e) Agrega la tarea al array tareasCreadas (Línea 115)
+   
+   f) Registra la actividad (Líneas 117-122):
+      - Si existe onActividad, llama al callback con información del evento
+      - Incluye mensaje descriptivo y datos de la tarea
+
+5. Actualización del estado local (Líneas 126-129)
+   - Agrega todas las tareas creadas al estado pendiente
+   - Usa spread operator para mantener las tareas existentes
+
+6. Notificación al componente padre (Líneas 131-134)
+   - Si existe onTareaCreada, lo ejecuta para que el padre recargue las tareas
+     desde el backend
+
+7. Limpieza del formulario (Líneas 136-144)
+   - Resetea todos los campos a sus valores iniciales:
+     * texto: ''
+     * descripcion: ''
+     * estudiantesSeleccionados: []
+     * fechaVencimiento: ''
+     * etiquetasSeleccionadas: []
+     * creandoEtiqueta: false
+     * nombreNuevaEtiqueta: ''
+     * colorNuevaEtiqueta: '#3498db'
+
+8. Manejo de errores (Líneas 145-148)
+   - Captura cualquier error durante el proceso
+   - Registra el error en la consola
+   - Muestra un alert al usuario con mensaje de error
+
+================================================================================
+RENDERIZADO DEL COMPONENTE (return)
+================================================================================
+
+Líneas 152-514: JSX que se renderiza en la interfaz
+----------------------------------------------------
+
+CONTENEDOR PRINCIPAL (Líneas 153-164)
+--------------------------------------
+Div principal con estilos dinámicos según el tema:
+- Fondo oscuro (#2d2d2d) o claro (white)
+- Padding, border-radius, box-shadow
+- Ancho máximo de 800px, centrado
+- Transiciones suaves para cambios de tema
+
+TÍTULO (Líneas 165-167)
+------------------------
+Encabezado "➕ Nueva Tarea" con estilos según el tema.
+
+CAMPO DE TÍTULO (Líneas 169-186)
+---------------------------------
+Input de texto para el título de la tarea:
+- Placeholder: "Título de la tarea..."
+- Valor controlado por estado 'texto'
+- onChange: Actualiza el estado 'texto'
+- onKeyPress: Si presiona Enter, ejecuta agregar()
+- Estilos adaptativos según tema
+
+CAMPO DE DESCRIPCIÓN (Líneas 188-206)
+--------------------------------------
+Textarea para la descripción opcional:
+- Placeholder: "Descripción de la tarea (opcional)..."
+- Valor controlado por estado 'descripcion'
+- onChange: Actualiza el estado 'descripcion'
+- Altura mínima de 60px, redimensionable verticalmente
+- Estilos adaptativos según tema
+
+GRID DE ASIGNACIÓN Y FECHA (Líneas 208-292)
+--------------------------------------------
+Contenedor con dos columnas usando CSS Grid:
+
+COLUMNA 1: SELECTOR DE ESTUDIANTES (Líneas 209-270)
+----------------------------------------------------
+Solo visible si:
+- usuario.rol === 'docente'
+- estudiantesDelCurso.length > 0
+
+a) Label (Líneas 211-213):
+   "Asignar a (puedes seleccionar varios):"
+
+b) Contenedor con scroll (Líneas 214-222):
+   - Altura máxima de 150px
+   - Scroll vertical si hay muchos estudiantes
+   - Estilos adaptativos según tema
+
+c) Mapeo de estudiantes (Líneas 223-257):
+   Para cada estudiante del curso:
+   - Calcula el ID del estudiante (userId o id)
+   - Verifica si está seleccionado
+   - Renderiza un label con checkbox:
+     * Checkbox (Líneas 238-252):
+       - Tipo checkbox
+       - Estado checked según estaSeleccionado
+       - onChange: Agrega o quita el ID del array estudiantesSeleccionados
+     * Nombre del estudiante (Línea 254)
+
+d) Contador de seleccionados (Líneas 259-268):
+   - Solo visible si hay estudiantes seleccionados
+   - Muestra cantidad y pluraliza correctamente
+   - Color verde para indicar selección
+
+COLUMNA 2: FECHA DE VENCIMIENTO (Líneas 272-291)
+-------------------------------------------------
+Input de tipo date:
+- Label: "Fecha de vencimiento:"
+- Valor controlado por estado 'fechaVencimiento'
+- onChange: Actualiza el estado 'fechaVencimiento'
+- Estilos adaptativos según tema
+
+SELECTOR DE ETIQUETAS (Líneas 294-496)
+---------------------------------------
+Solo visible si usuario.rol === 'docente'
+
+a) Label (Líneas 297-305):
+   "🏷️ Etiquetas:" con estilos destacados
+
+b) Etiquetas disponibles (Líneas 308-363):
+   Solo se muestra si hay etiquetas disponibles
+   
+   - Contenedor flex (Líneas 309-317):
+     * Display flex con wrap
+     * Gap de 8px entre etiquetas
+     * Fondo adaptativo según tema
+   
+   - Mapeo de etiquetas (Líneas 318-361):
+     Para cada etiqueta:
+     * Verifica si está seleccionada
+     * Busca si es una etiqueta predefinida (para mostrar icono)
+     * Renderiza botón (Líneas 322-359):
+       - onClick: Agrega o quita el ID del array etiquetasSeleccionadas
+       - Estilos dinámicos:
+         * Si está seleccionada: fondo del color de la etiqueta, texto blanco
+         * Si no está seleccionada: fondo transparente, texto del color
+       - Muestra icono si es predefinida
+       - Muestra círculo de color
+       - Muestra nombre de la etiqueta
+       - Muestra ✓ si está seleccionada
+
+c) Crear nueva etiqueta (Líneas 365-494):
+   
+   Si creandoEtiqueta === false (Líneas 366-382):
+   - Botón "➕ Crear nueva etiqueta"
+   - onClick: Cambia creandoEtiqueta a true
+   
+   Si creandoEtiqueta === true (Líneas 383-494):
+   - Formulario para crear etiqueta:
+     * Input de nombre (Líneas 390-406):
+       - Placeholder: "Nombre de la etiqueta..."
+       - Valor controlado por nombreNuevaEtiqueta
+       - onChange: Actualiza nombreNuevaEtiqueta
+     
+     * Selector de color (Líneas 407-423):
+       - Input tipo color
+       - Valor controlado por colorNuevaEtiqueta
+       - onChange: Actualiza colorNuevaEtiqueta
+       - Texto explicativo
+     
+     * Botones (Líneas 424-492):
+       - Botón "Crear" (Líneas 425-471):
+         * onClick: Función asíncrona que:
+           - Valida que el nombre no esté vacío
+           - Valida que haya boardId
+           - Crea la etiqueta usando labelsAPI.create()
+           - Agrega el ID de la nueva etiqueta a etiquetasSeleccionadas
+           - Resetea el formulario
+           - Ejecuta onTareaCreada si existe
+           - Maneja errores con try/catch
+       
+       - Botón "Cancelar" (Líneas 472-491):
+         * onClick: Resetea el formulario sin crear la etiqueta
+
+BOTÓN AGREGAR TAREA (Líneas 498-512)
+-------------------------------------
+Botón principal para crear la tarea:
+- Texto: "Agregar Tarea"
+- onClick: Ejecuta la función agregar()
+- Estilos: Fondo verde (#4caf50), texto blanco, padding, border-radius
+- Cursor pointer, fuente en negrita
+
+================================================================================
+EXPORTACIÓN
+================================================================================
+
+Línea 517: export default NuevaTarea;
+--------------------------------------
+Exporta el componente como exportación por defecto para que pueda ser
+importado en otros archivos.
+
+================================================================================
+CARACTERÍSTICAS PRINCIPALES
+================================================================================
+
+1. ASIGNACIÓN MÚLTIPLE DE ESTUDIANTES
+   - Permite seleccionar varios estudiantes mediante checkboxes
+   - Crea una tarea duplicada para cada estudiante seleccionado
+   - Mantiene compatibilidad con el backend que solo soporta un estudiante
+     por tarea
+
+2. GESTIÓN DE ETIQUETAS
+   - Permite seleccionar múltiples etiquetas existentes
+   - Permite crear nuevas etiquetas con nombre y color personalizado
+   - Muestra iconos para etiquetas predefinidas
+
+3. TEMA ADAPTATIVO
+   - Todos los estilos se adaptan al tema claro/oscuro
+   - Usa el hook useTheme para obtener el estado del tema
+
+4. VALIDACIONES
+   - Valida que el título no esté vacío antes de crear
+   - Valida que haya boardId antes de crear etiquetas
+   - Maneja errores de forma amigable con mensajes al usuario
+
+5. SINCRONIZACIÓN CON BACKEND
+   - Crea las tareas en el backend usando la API
+   - Actualiza el estado local inmediatamente
+   - Notifica al componente padre para recargar desde el backend
+
+================================================================================
+FIN DE LA DOCUMENTACIÓN
+================================================================================
+
