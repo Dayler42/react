@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: backend
+    env: python
+    buildCommand: ""
+    startCommand: gunicorn core.wsgi:application --bind 0.0.0.0:$PORT
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: core.settings
+      - key: PYTHON_VERSION
+        value: 3.12
+
